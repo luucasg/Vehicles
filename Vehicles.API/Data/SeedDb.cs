@@ -26,19 +26,19 @@ namespace Vehicles.API.Data
             await CheckDocumentTypesAsync();
             await CheckProceduresAsync();
             await CheckRolesAsync();
-            await CheckUserAsync("1010", "Andres", "Galvis", "andres@yopmail.com", "301 692 1942", "Calle Luna Calle Sol", UserType.Admin);
+            await CheckUserAsync("1010", "Luis", "Galvis", "luis@yopmail.com", "301 692 1942", "Calle Luna Calle Sol", UserType.Admin);
             await CheckUserAsync("1010", "Lucas", "Giraldo", "lucas@yopmail.com", "301 692 1942", "Calle Luna Calle Sol", UserType.User);
             await CheckUserAsync("1010", "Mateo", "Giraldo", "mateo@yopmail.com", "301 692 1942", "Calle Luna Calle Sol", UserType.User);
         }
 
-        private async Task CheckUserAsync(string document, string firstName, string lastName, string email, string phoneNumber, string adress, UserType userType)
+        private async Task CheckUserAsync(string document, string firstName, string lastName, string email, string phoneNumber, string address, UserType userType)
         {
             User user = await _userHelper.GetUserAsync(email);
             if(user == null)
             {
                 user = new User
                 {
-                    Adress = adress,
+                    Address = address,
                     Document = document,
                     DocumentType = _context.DocumentTypes.FirstOrDefault(x => x.Description == "Cédula"),
                     Email = email,
