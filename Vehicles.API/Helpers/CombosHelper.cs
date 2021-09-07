@@ -16,7 +16,7 @@ namespace Vehicles.API.Helpers
             _context = context;
         }
 
-        public IEnumerable<SelectListItem> GetComboBrand()
+        public IEnumerable<SelectListItem> GetComboBrands()
         {
             List<SelectListItem> list = _context.Brands.Select(x => new SelectListItem
             {

@@ -11,6 +11,6 @@ namespace Vehicles.API.Helpers
         IEnumerable<SelectListItem> GetComboDocumentTypes();
         IEnumerable<SelectListItem> GetComboProcedures();
         IEnumerable<SelectListItem> GetComboVehicleTypes();
-        IEnumerable<SelectListItem> GetComboBrand();
+        IEnumerable<SelectListItem> GetComboBrands();
     }
 }
