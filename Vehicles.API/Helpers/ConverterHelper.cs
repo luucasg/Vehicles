@@ -81,7 +81,10 @@ namespace Vehicles.API.Helpers
                 Model = vehicle.Model,
                 Plaque = vehicle.Plaque,
                 Remarks = vehicle.Remarks,
-                UserId = vehicle.User.Id
+                UserId = vehicle.User.Id,
+                VehiclePhotos = vehicle.VehiclePhotos,
+                VehicleTypeId = vehicle.VehicleType.Id,
+                VehicleTypes = _combosHelper.GetComboVehicleTypes()
             };
         }
     }

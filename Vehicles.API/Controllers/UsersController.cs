@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System;
@@ -238,6 +238,252 @@ namespace Vehicles.API.Controllers
             vehicleViewModel.Brands = _combosHelper.GetComboBrands();
             vehicleViewModel.VehicleTypes = _combosHelper.GetComboVehicleTypes();
             return View(vehicleViewModel);
+        }
+
+        public async Task<IActionResult> EditVehicle(int? id)
+        {
+            if(id == null)
+            {
+                return NotFound();
+            }
+
+            Vehicle vehicle = await _context.Vehicles
+                .Include(x => x.User)
+                .Include(x => x.Brand)
+                .Include(x => x.VehicleType)
+                .Include(x => x.VehiclePhotos)
+                .FirstOrDefaultAsync(x => x.Id == id);
+            if(vehicle == null)
+            {
+                return NotFound();
+            }
+
+            VehicleViewModel model = _converterHelper.ToVehicleViewModel(vehicle);
+            return View(model);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> EditVehicle(int id, VehicleViewModel vehicleViewModel)
+        {
+            if (id != vehicleViewModel.Id)
+            {
+                return NotFound();
+            }
+
+            if (ModelState.IsValid)
+            {
+                try
+                {
+                    Vehicle vehicle = await _converterHelper.ToVehicleAsync(vehicleViewModel, false);
+                    _context.Vehicles.Update(vehicle);
+                    await _context.SaveChangesAsync();
+                    return RedirectToAction(nameof(Details), new { id = vehicleViewModel.UserId });
+                }
+                catch (DbUpdateException dbUpdateException)
+                {
+                    if (dbUpdateException.InnerException.Message.Contains("duplicate"))
+                    {
+                        ModelState.AddModelError(string.Empty, "Ya existe un vehículo con esta placa.");
+                    }
+                    else
+                    {
+                        ModelState.AddModelError(string.Empty, dbUpdateException.InnerException.Message);
+                    }
+                }
+                catch (Exception exception)
+                {
+                    ModelState.AddModelError(string.Empty, exception.Message);
+                }
+            }
+
+            vehicleViewModel.Brands = _combosHelper.GetComboBrands();
+            vehicleViewModel.VehicleTypes = _combosHelper.GetComboVehicleTypes();
+            return View(vehicleViewModel);
+        }
+
+        public async Task<IActionResult> DeleteVehicle(int? id)
+        {
+            if (id == null)
+            {
+                return NotFound();
+            }
+
+            Vehicle vehicle = await _context.Vehicles
+                .Include(x => x.User)
+                .Include(x => x.VehiclePhotos)
+                .Include(x => x.Histories)
+                .ThenInclude(x => x.Details)
+                .FirstOrDefaultAsync(x => x.Id == id);
+            if (vehicle == null)
+            {
+                return NotFound();
+            }
+
+            _context.Vehicles.Remove(vehicle);
+            await _context.SaveChangesAsync();
+            return RedirectToAction(nameof(Details), new { id = vehicle.User.Id });
+        }
+
+        public async Task<IActionResult> DeleteImageVehicle(int? id)
+        {
+            if (id == null)
+            {
+                return NotFound();
+            }
+
+            VehiclePhoto vehiclePhoto = await _context.VehiclePhotos
+                .Include(x => x.Vehicle)
+                .FirstOrDefaultAsync(x => x.Id == id);
+            if (vehiclePhoto == null)
+            {
+                return NotFound();
+            }
+
+            try
+            {
+                await _blobHelper.DeleteBlobAsync(vehiclePhoto.ImageId, "vehicles");
+            }
+            catch { }
+
+            _context.VehiclePhotos.Remove(vehiclePhoto);
+            await _context.SaveChangesAsync();
+            return RedirectToAction(nameof(EditVehicle), new { id = vehiclePhoto.Vehicle.Id });
+        }
+
+        public async Task<IActionResult> AddVehicleImage(int? id)
+        {
+            if (id == null)
+            {
+                return NotFound();
+            }
+
+            Vehicle vehicle = await _context.Vehicles
+                .FirstOrDefaultAsync(x => x.Id == id);
+            if (vehicle == null)
+            {
+                return NotFound();
+            }
+
+            VehiclePhotoViewModel model = new()
+            {
+                VehicleId = vehicle.Id
+            };
+
+            return View(model);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> AddVehicleImage(VehiclePhotoViewModel model)
+        {
+            if (ModelState.IsValid)
+            {
+                Guid imageId = await _blobHelper.UploadBlobAsync(model.ImageFile, "vehicles");
+                Vehicle vehicle = await _context.Vehicles
+                    .Include(x => x.VehiclePhotos)
+                    .FirstOrDefaultAsync(x => x.Id == model.VehicleId);
+                if (vehicle.VehiclePhotos == null)
+                {
+                    vehicle.VehiclePhotos = new List<VehiclePhoto>();
+                }
+
+                vehicle.VehiclePhotos.Add(new VehiclePhoto
+                {
+                    ImageId = imageId
+                });
+
+                _context.Vehicles.Update(vehicle);
+                await _context.SaveChangesAsync();
+                return RedirectToAction(nameof(EditVehicle), new { id = vehicle.Id });
+            }
+
+            return View(model);
+
+        }
+
+        public async Task<IActionResult> DetailsVehicle(int? id)
+        {
+            if (id == null)
+            {
+                return NotFound();
+            }
+
+            Vehicle vehicle = await _context.Vehicles
+                .Include(x => x.User)
+                .Include(x => x.VehicleType)
+                .Include(x => x.Brand)
+                .Include(x => x.VehiclePhotos)
+                .Include(x => x.Histories)
+                .ThenInclude(x => x.Details)
+                .ThenInclude(x => x.Procedure)
+                .Include(x => x.Histories)
+                .ThenInclude(x => x.User)
+                .FirstOrDefaultAsync(x => x.Id == id);
+            if (vehicle == null)
+            {
+                return NotFound();
+            }
+
+            return View(vehicle);
+        }
+
+        public async Task<IActionResult> AddHistory(int? id)
+        {
+            if(id == null)
+            {
+                return NotFound();
+            }
+
+            Vehicle vehicle = await _context.Vehicles.FindAsync(id);
+            if(vehicle == null)
+            {
+                return NotFound();
+            }
+
+            HistoryViewModel model = new HistoryViewModel
+            {
+                VehicleId = vehicle.Id
+            };
+
+            return View(model);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> AddHistory(HistoryViewModel model)
+        {
+            if (ModelState.IsValid)
+            {
+                Vehicle vehicle = await _context.Vehicles
+                    .Include(x => x.Histories)
+                    .FirstOrDefaultAsync(x => x.Id == model.VehicleId);
+                if(vehicle == null)
+                {
+                    return NotFound();
+                }
+
+                User user = await _userHelper.GetUserAsync(User.Identity.Name);
+                History history = new History
+                {
+                    Date = DateTime.UtcNow,
+                    Mileage = model.Mileage,
+                    Remarks = model.Remarks,
+                    User = user
+                };
+
+                if(vehicle.Histories == null)
+                {
+                    vehicle.Histories = new List<History>();
+                }
+
+                vehicle.Histories.Add(history);
+                _context.Vehicles.Update(vehicle);
+                await _context.SaveChangesAsync();
+                return RedirectToAction(nameof(DetailsVehicle), new { id = vehicle.Id });
+            }
+
+            return View(model);
         }
     }
 }
