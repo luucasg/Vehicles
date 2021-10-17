@@ -12,6 +12,7 @@ namespace Vehicles.API.Data
     {
         private readonly DataContext _context;
         private readonly IUserHelper _userHelper;
+
         public SeedDb(DataContext context, IUserHelper userHelper)
         {
             _context = context;
@@ -35,7 +36,7 @@ namespace Vehicles.API.Data
         private async Task CheckUserAsync(string document, string firstName, string lastName, string email, string phoneNumber, string address, UserType userType)
         {
             User user = await _userHelper.GetUserAsync(email);
-            if(user == null)
+            if (user == null)
             {
                 user = new User
                 {
@@ -52,6 +53,9 @@ namespace Vehicles.API.Data
 
                 await _userHelper.AddUserAsync(user, "123456");
                 await _userHelper.AddUserToRoleAsync(user, userType.ToString());
+
+                string token = await _userHelper.GenerateEmailConfirmationTokenAsync(user);
+                await _userHelper.ConfirmEmailAsync(user, token);
             }
         }
 
